@@ -1,0 +1,20 @@
+http_server:
+  host: localhost
+  port: 8081
+  timeout: 5s
+
+postgres:
+  host: localhost
+  port: 5432
+  user: wb_tech_user
+  password: 12345678
+  database: wb_tech_demo_service
+
+cache:
+  startup_size: 10
+
+kafka:
+  host: localhost
+  port: 9092
+  topic: wb-tech-orders
+  group: wb-tech-demo-service
