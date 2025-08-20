@@ -231,3 +231,49 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 
 	return &order, nil
 }
+
+func (pg *Postgres) GetLastOrders(limit int) ([]*model.Order, error) {
+	query := `
+		SELECT order_uid 
+		FROM orders 
+		ORDER BY created_at DESC 
+		LIMIT $1`
+
+	rows, err := pg.db.Query(query, limit)
+	if err != nil {
+		log.Printf("failed to query last order uids: %v", err)
+		return nil, util.ErrInternal
+	}
+	defer rows.Close()
+
+	var orderUIDs []string
+	for rows.Next() {
+		var uid string
+		if err := rows.Scan(&uid); err != nil {
+			log.Printf("failed to scan order uid: %v", err)
+			return nil, util.ErrInternal
+		}
+		orderUIDs = append(orderUIDs, uid)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("error during rows iteration for order uids: %v", err)
+		return nil, util.ErrInternal
+	}
+
+	if len(orderUIDs) == 0 {
+		return []*model.Order{}, nil
+	}
+
+	var orders []*model.Order
+	for _, uid := range orderUIDs {
+		order, err := pg.GetOrderByUID(uid)
+		if err != nil {
+			log.Printf("failed to get order by uid %s: %v", uid, err)
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}

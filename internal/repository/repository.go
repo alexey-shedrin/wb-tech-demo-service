@@ -20,7 +20,19 @@ func New(cfg *config.Config) *Repository {
 		Cache:    cache.New(),
 	}
 
-	//Прогрев кэша
+	cacheSize := cfg.Cache.StartupSize
+	if cacheSize > 0 {
+		log.Printf("starting cache warming with the last %d orders", cacheSize)
+		lastOrders, err := repo.Postgres.GetLastOrders(cacheSize)
+		if err != nil {
+			log.Printf("cache warming failed: could not get last orders: %v", err)
+		} else {
+			for _, order := range lastOrders {
+				repo.Cache.PutOrder(order)
+			}
+			log.Printf("cache warming finished: loaded %d orders into the cache", len(lastOrders))
+		}
+	}
 
 	return &repo
 }
