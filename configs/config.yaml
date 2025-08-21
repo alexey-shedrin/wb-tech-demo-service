@@ -5,7 +5,7 @@ http_server:
 
 postgres:
   host: localhost
-  port: 5432
+  port: 5433
   user: wb_tech_user
   password: 12345678
   database: wb_tech_demo_service
