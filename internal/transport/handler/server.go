@@ -10,6 +10,7 @@ import (
 
 func NewServer(cfg *config.Config, h *Handler) *http.Server {
 	router := mux.NewRouter()
+	router.HandleFunc("/", h.ServeIndex).Methods(http.MethodGet)
 	router.HandleFunc("/order/{uid}", h.GetOrderByUID).Methods(http.MethodGet)
 
 	addrStr := fmt.Sprintf("%s:%d", cfg.HTTPServer.Host, cfg.HTTPServer.Port)

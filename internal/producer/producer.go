@@ -46,7 +46,7 @@ func (p *Producer) ProduceOrders(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			order := GenerateRandomOrder()
+			order := generateRandomOrder()
 
 			orderJSON, err := json.Marshal(order)
 			if err != nil {
@@ -73,7 +73,7 @@ func (p *Producer) ProduceOrders(ctx context.Context) {
 	}
 }
 
-func GenerateRandomOrder() model.Order {
+func generateRandomOrder() model.Order {
 	orderUID := uuid.New().String()
 	trackNumber := "WBILM" + fmt.Sprintf("%d", rand.Intn(1000000)) + "TEST"
 

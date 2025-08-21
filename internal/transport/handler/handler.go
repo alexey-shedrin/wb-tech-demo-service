@@ -26,6 +26,10 @@ func New(service Service) *Handler {
 	}
 }
 
+func (h *Handler) ServeIndex(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./web/index.html")
+}
+
 func (h *Handler) GetOrderByUID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orderUID := vars["uid"]
