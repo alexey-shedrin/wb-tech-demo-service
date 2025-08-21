@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/alexey-shedrin/wb-tech-demo-service/internal/model"
@@ -11,7 +13,7 @@ import (
 )
 
 type Service interface {
-	GetOrderByUID(orderUID string) (*model.Order, error)
+	GetOrderByUID(ctx context.Context, orderUID string) (*model.Order, error)
 }
 
 type Handler struct {
@@ -28,17 +30,22 @@ func (h *Handler) GetOrderByUID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orderUID := vars["uid"]
 
-	order, err := h.service.GetOrderByUID(orderUID)
+	ctx := r.Context()
+	order, err := h.service.GetOrderByUID(ctx, orderUID)
 	if err != nil {
 		if errors.Is(err, util.ErrOrderNotFound) {
 			http.Error(w, "Order not found", http.StatusNotFound)
+			log.Printf("order with UID %s not found", orderUID)
 			return
 		}
+
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("failed to retrieve order with UID %s: %v", orderUID, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(order)
+	log.Printf("order with UID %s retrieved successfully", orderUID)
 }

@@ -1,10 +1,14 @@
 package service
 
-import "github.com/alexey-shedrin/wb-tech-demo-service/internal/model"
+import (
+	"context"
+
+	"github.com/alexey-shedrin/wb-tech-demo-service/internal/model"
+)
 
 type Repository interface {
-	GetOrderByUID(orderUID string) (*model.Order, error)
-	SaveOrder(order *model.Order) error
+	GetOrderByUID(ctx context.Context, orderUID string) (*model.Order, error)
+	SaveOrder(ctx context.Context, order *model.Order) error
 }
 
 type Service struct {
@@ -15,8 +19,8 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s Service) GetOrderByUID(orderUID string) (*model.Order, error) {
-	order, err := s.repo.GetOrderByUID(orderUID)
+func (s Service) GetOrderByUID(ctx context.Context, orderUID string) (*model.Order, error) {
+	order, err := s.repo.GetOrderByUID(ctx, orderUID)
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +28,6 @@ func (s Service) GetOrderByUID(orderUID string) (*model.Order, error) {
 	return order, nil
 }
 
-func (s Service) SaveOrder(order *model.Order) error {
-	return s.repo.SaveOrder(order)
+func (s Service) SaveOrder(ctx context.Context, order *model.Order) error {
+	return s.repo.SaveOrder(ctx, order)
 }

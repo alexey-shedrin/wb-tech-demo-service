@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -52,8 +53,8 @@ func (pg *Postgres) Close() {
 	}
 }
 
-func (pg *Postgres) SaveOrder(order *model.Order) error {
-	tx, err := pg.db.Begin()
+func (pg *Postgres) SaveOrder(ctx context.Context, order *model.Order) error {
+	tx, err := pg.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("failed to begin transaction: %v", err)
 		return util.ErrInternal
@@ -71,7 +72,7 @@ func (pg *Postgres) SaveOrder(order *model.Order) error {
 			customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
-	_, err = tx.Exec(orderQuery,
+	_, err = tx.ExecContext(ctx, orderQuery,
 		order.OrderUID, order.TrackNumber, order.Entry, order.Locale,
 		order.InternalSignature, order.CustomerID, order.DeliveryService,
 		order.Shardkey, order.SmID, order.DateCreated, order.OofShard,
@@ -86,7 +87,7 @@ func (pg *Postgres) SaveOrder(order *model.Order) error {
 			order_uid, name, phone, zip, city, address, region, email
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-	_, err = tx.Exec(deliveryQuery,
+	_, err = tx.ExecContext(ctx, deliveryQuery,
 		order.OrderUID, order.Delivery.Name, order.Delivery.Phone,
 		order.Delivery.Zip, order.Delivery.City, order.Delivery.Address,
 		order.Delivery.Region, order.Delivery.Email,
@@ -102,7 +103,7 @@ func (pg *Postgres) SaveOrder(order *model.Order) error {
 			amount, payment_dt, bank, delivery_cost, goods_total, custom_fee
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
-	_, err = tx.Exec(paymentQuery,
+	_, err = tx.ExecContext(ctx, paymentQuery,
 		order.OrderUID, order.Payment.Transaction, order.Payment.RequestID,
 		order.Payment.Currency, order.Payment.Provider, order.Payment.Amount,
 		order.Payment.PaymentDt, order.Payment.Bank, order.Payment.DeliveryCost,
@@ -120,7 +121,7 @@ func (pg *Postgres) SaveOrder(order *model.Order) error {
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 
 	for _, item := range order.Items {
-		_, err = tx.Exec(itemQuery,
+		_, err = tx.ExecContext(ctx, itemQuery,
 			order.OrderUID, item.ChrtID, item.TrackNumber, item.Price,
 			item.Rid, item.Name, item.Sale, item.Size, item.TotalPrice,
 			item.NmID, item.Brand, item.Status,
@@ -140,7 +141,7 @@ func (pg *Postgres) SaveOrder(order *model.Order) error {
 	return nil
 }
 
-func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
+func (pg *Postgres) GetOrderByUID(ctx context.Context, orderUID string) (*model.Order, error) {
 	var order model.Order
 
 	orderQuery := `
@@ -149,7 +150,7 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 		FROM orders 
 		WHERE order_uid = $1`
 
-	err := pg.db.QueryRow(orderQuery, orderUID).Scan(
+	err := pg.db.QueryRowContext(ctx, orderQuery, orderUID).Scan(
 		&order.OrderUID, &order.TrackNumber, &order.Entry, &order.Locale,
 		&order.InternalSignature, &order.CustomerID, &order.DeliveryService,
 		&order.Shardkey, &order.SmID, &order.DateCreated, &order.OofShard,
@@ -167,7 +168,7 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 		FROM deliveries 
 		WHERE order_uid = $1`
 
-	err = pg.db.QueryRow(deliveryQuery, orderUID).Scan(
+	err = pg.db.QueryRowContext(ctx, deliveryQuery, orderUID).Scan(
 		&order.Delivery.Name, &order.Delivery.Phone, &order.Delivery.Zip,
 		&order.Delivery.City, &order.Delivery.Address, &order.Delivery.Region,
 		&order.Delivery.Email,
@@ -183,7 +184,7 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 		FROM payments 
 		WHERE order_uid = $1`
 
-	err = pg.db.QueryRow(paymentQuery, orderUID).Scan(
+	err = pg.db.QueryRowContext(ctx, paymentQuery, orderUID).Scan(
 		&order.Payment.Transaction, &order.Payment.RequestID, &order.Payment.Currency,
 		&order.Payment.Provider, &order.Payment.Amount, &order.Payment.PaymentDt,
 		&order.Payment.Bank, &order.Payment.DeliveryCost, &order.Payment.GoodsTotal,
@@ -200,7 +201,7 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 		FROM items 
 		WHERE order_uid = $1`
 
-	rows, err := pg.db.Query(itemsQuery, orderUID)
+	rows, err := pg.db.QueryContext(ctx, itemsQuery, orderUID)
 	if err != nil {
 		log.Printf("failed to query items: %v", err)
 		return nil, util.ErrInternal
@@ -232,14 +233,14 @@ func (pg *Postgres) GetOrderByUID(orderUID string) (*model.Order, error) {
 	return &order, nil
 }
 
-func (pg *Postgres) GetLastOrders(limit int) ([]*model.Order, error) {
+func (pg *Postgres) GetLastOrders(ctx context.Context, limit int) ([]*model.Order, error) {
 	query := `
 		SELECT order_uid 
 		FROM orders 
 		ORDER BY created_at DESC 
 		LIMIT $1`
 
-	rows, err := pg.db.Query(query, limit)
+	rows, err := pg.db.QueryContext(ctx, query, limit)
 	if err != nil {
 		log.Printf("failed to query last order uids: %v", err)
 		return nil, util.ErrInternal
@@ -267,7 +268,7 @@ func (pg *Postgres) GetLastOrders(limit int) ([]*model.Order, error) {
 
 	var orders []*model.Order
 	for _, uid := range orderUIDs {
-		order, err := pg.GetOrderByUID(uid)
+		order, err := pg.GetOrderByUID(ctx, uid)
 		if err != nil {
 			log.Printf("failed to get order by uid %s: %v", uid, err)
 			return nil, err

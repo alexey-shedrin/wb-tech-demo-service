@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"log"
 
 	"github.com/alexey-shedrin/wb-tech-demo-service/internal/config"
@@ -23,7 +24,7 @@ func New(cfg *config.Config) *Repository {
 	cacheSize := cfg.Cache.StartupSize
 	if cacheSize > 0 {
 		log.Printf("starting cache warming with the last %d orders", cacheSize)
-		lastOrders, err := repo.Postgres.GetLastOrders(cacheSize)
+		lastOrders, err := repo.Postgres.GetLastOrders(context.Background(), cacheSize)
 		if err != nil {
 			log.Printf("cache warming failed: could not get last orders: %v", err)
 		} else {
@@ -41,8 +42,8 @@ func (repo *Repository) Close() {
 	repo.Postgres.Close()
 }
 
-func (repo *Repository) SaveOrder(order *model.Order) error {
-	err := repo.Postgres.SaveOrder(order)
+func (repo *Repository) SaveOrder(ctx context.Context, order *model.Order) error {
+	err := repo.Postgres.SaveOrder(ctx, order)
 	if err != nil {
 		return err
 	}
@@ -51,13 +52,13 @@ func (repo *Repository) SaveOrder(order *model.Order) error {
 	return nil
 }
 
-func (repo *Repository) GetOrderByUID(orderUID string) (*model.Order, error) {
+func (repo *Repository) GetOrderByUID(ctx context.Context, orderUID string) (*model.Order, error) {
 	order, found := repo.Cache.GetOrderByUID(orderUID)
 	if found {
 		return order, nil
 	}
 
-	order, err := repo.Postgres.GetOrderByUID(orderUID)
+	order, err := repo.Postgres.GetOrderByUID(ctx, orderUID)
 	if err != nil {
 		return nil, err
 	}
