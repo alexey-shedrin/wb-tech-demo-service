@@ -1,4 +1,4 @@
-package main
+package sup
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"syscall"
 
 	"github.com/alexey-shedrin/wb-tech-demo-service/internal/config"
-	"github.com/alexey-shedrin/wb-tech-demo-service/internal/producer"
+	"github.com/alexey-shedrin/wb-tech-demo-service/internal/transport/producer"
 )
 
-func main() {
+func Run() {
 	cfg := config.New()
 	log.Println("config initialized")
 
